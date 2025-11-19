@@ -7,6 +7,9 @@ namespace Normal.XR {
     /// For debugging/testing purposes only.
     /// </summary>
     public class XRKeyboardAndMouseMovement : MonoBehaviour {
+
+        private const float MAX_HEAD_PITCH_ANGLE = 50f;
+
         [SerializeField]
         private Rigidbody _target;
 
@@ -22,15 +25,29 @@ namespace Normal.XR {
         [SerializeField]
         private bool _holdLeftMouseToTurn = true;
 
+        [SerializeField]
+        private bool _holdLeftMouseToLookUpDown = true;
+
         private void Update() {
             var targetTransform = _target.transform;
 
-            PollMouse(out var deltaX);
+            PollMouse(out var eulerDelta);
 
-            if (Mathf.Approximately(deltaX, 0f) == false) {
-                // Turn around the Y axis
-                var eulerDelta = new Vector3(0f, deltaX, 0f) * (_turnSpeed * Time.deltaTime);
-                targetTransform.eulerAngles += eulerDelta;
+            if (eulerDelta != Vector3.zero) {
+                // Calculate and apply pitch and yaw changes this frame.
+                eulerDelta *= _turnSpeed * Time.deltaTime;
+                targetTransform.rotation *= Quaternion.Euler(eulerDelta.x, eulerDelta.y, 0f);
+
+                // Clamp pitch to avoid flipping over
+                float currentPitch = targetTransform.eulerAngles.x;
+                if (currentPitch > 180f) {
+                    currentPitch -= 360f;
+                }
+
+                float clampedPitch = Mathf.Clamp(currentPitch, -MAX_HEAD_PITCH_ANGLE, MAX_HEAD_PITCH_ANGLE);
+
+                // Reapply clamped pitch together with current yaw
+                targetTransform.rotation = Quaternion.Euler(clampedPitch, targetTransform.eulerAngles.y, 0f /*No roll*/); 
             }
 
             PollKeyboard(out var localMovementDirection, out var jump);
@@ -81,19 +98,23 @@ namespace Normal.XR {
             jump = keyboard.spaceKey.wasPressedThisFrame;
         }
 
-        private void PollMouse(out float deltaX) {
-            deltaX = 0f;
+        private void PollMouse(out Vector3 eulerDelta) {
+            eulerDelta = Vector3.zero;
 
             var mouse = Mouse.current;
             if (mouse == null) {
                 return;
             }
 
-            if (_holdLeftMouseToTurn && mouse.leftButton.isPressed == false) {
-                return;
+            if (mouse.leftButton.isPressed || !_holdLeftMouseToTurn)
+            {
+                eulerDelta.y = mouse.delta.x.value;
             }
 
-            deltaX = mouse.delta.x.value;
+            if (mouse.leftButton.isPressed || !_holdLeftMouseToLookUpDown)
+            {
+                eulerDelta.x = -mouse.delta.y.value;
+            }
         }
     }
 }
