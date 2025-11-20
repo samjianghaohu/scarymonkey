@@ -1202,6 +1202,7 @@ GameObject:
   - component: {fileID: 980763215}
   - component: {fileID: 980763214}
   - component: {fileID: 980763216}
+  - component: {fileID: 980763217}
   m_Layer: 18
   m_Name: Enemy
   m_TagString: Untagged
@@ -1305,6 +1306,8 @@ MonoBehaviour:
   _components:
   - componentID: 1
     component: {fileID: 980763214}
+  - componentID: 2
+    component: {fileID: 980763217}
   _childViews: []
 --- !u!114 &980763216
 MonoBehaviour:
@@ -1318,6 +1321,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2799494b1fab44469b15e79ca124c501, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &980763217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 980763210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1029778088, guid: ebae63e7edba59945a994528ada1f7a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _interpolate: 1
+  _syncPosition: 1
+  _syncRotation: 1
+  _syncScale: 1
+  _syncVelocity: 1
+  _maintainOwnershipWhileSleeping: 1
 --- !u!1001 &1025125532
 PrefabInstance:
   m_ObjectHideFlags: 0

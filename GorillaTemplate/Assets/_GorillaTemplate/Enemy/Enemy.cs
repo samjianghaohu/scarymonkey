@@ -65,14 +65,17 @@ namespace ScaryMonkey.Enemy
                 return;
             }
 
-            // Initialize State Machine. All client needs to do this.
             if (_dataSync != null)
             {
+                // Initialize State Machine. All client needs to do this.
                 _stateMachine = new SynchronizedStateMachine(_dataSync);
                 _stateMachine.AddState((ushort)State.Idle, OnEnterIdle, OnUpdateIdle, null);
                 _stateMachine.AddState((ushort)State.FoundTarget, OnEnterFoundTarget, OnUpdateFoundTarget, null);
                 _stateMachine.AddState((ushort)State.ChaseTarget, OnEnterChaseTarget, OnUpdateChaseTarget, OnExitChaseTarget);
                 _stateMachine.AddState((ushort)State.LostTarget, OnEnterLostPlayer, OnUpdateLostPlayer, OnExitLostPlayer);
+
+                // Listen to synced value changed events so that we can update remote enemies.
+                _dataSync.OnRadarDisabledChangedAction += OnRadarDisabledChanged;
             }
 
             if (radar != null)
@@ -85,7 +88,6 @@ namespace ScaryMonkey.Enemy
         {
             idleStartPositionWS = transform.position;
             _stateMachine?.InitializeWithState((ushort)State.Idle);
-
         }
 
         private void Update()
@@ -100,6 +102,11 @@ namespace ScaryMonkey.Enemy
                 radar.OnPlayerEnterRadar -= OnPlayerEnteredRadar;
             }
 
+            if (_dataSync != null)
+            {
+                _dataSync.OnRadarDisabledChangedAction -= OnRadarDisabledChanged;
+            }
+
             _stateMachine?.Dispose();
         }
 
@@ -112,6 +119,8 @@ namespace ScaryMonkey.Enemy
         private void OnEnterIdle(ushort previousState, ushort newState)
         {
             transform.position = idleStartPositionWS;
+
+            SetRadarDisabled(disabled: false);
             // TODO: Add some one-time audiovisual effect for teleporting.
         }
 
@@ -136,6 +145,10 @@ namespace ScaryMonkey.Enemy
 
         private void OnEnterFoundTarget(ushort previousState, ushort newState)
         {
+            // Disable rader so the enemy can focus on the spotted target.
+            // TODO: Consider keeping rader active and allow choosing the closest target.
+            SetRadarDisabled(disabled: true);
+
             foundTargetStartTime = Time.time;
 
             // TODO: Add some one-time audiovisual effect for spotting the player.
@@ -241,6 +254,9 @@ namespace ScaryMonkey.Enemy
         {
             // Ensure clean state when entering LostTarget state.
             reachedTargetLastSpotPosition = false;
+
+            // Re-enable radar to allow spotting new targets.
+            SetRadarDisabled(disabled: false);
         }
 
         private void OnUpdateLostPlayer()
@@ -254,6 +270,7 @@ namespace ScaryMonkey.Enemy
 
             if (reachedTargetLastSpotPosition)
             {
+                transform.position = targetLastSpotPosition;
                 if (Time.time - reachedTargetLastSpotTime > lostTargetWaitDuration)
                 {
                     // Waited long enough at last seen position without spotting target again.
@@ -286,8 +303,30 @@ namespace ScaryMonkey.Enemy
 
         #region Player Detection
 
+        public void SetRadarDisabled(bool disabled)
+        {
+            if (radar != null)
+            {
+                radar.gameObject.SetActive(!disabled);
+            }
+
+            if (_dataSync != null)
+            {
+                _dataSync.AuthoritySetRadarDisabled(disabled);
+            }
+        }
+
+        private void OnRadarDisabledChanged(bool disabled)
+        {
+            if (radar != null)
+            {
+                radar.gameObject.SetActive(!disabled);
+            }
+        }
+
         private void OnPlayerEnteredRadar(Player player)
         {
+            Debug.LogError("Local Player entered radar!");
             if (_stateMachine.CurrentState != (ushort)State.Idle && _stateMachine.CurrentState != (ushort)State.LostTarget)
             {
                 return;

@@ -17,7 +17,7 @@ namespace ScaryMonkey.Utility
             _dataSync = dataSync;
             if (!_dataSync.IsUnityNull())
             {
-                _dataSync.OnStateChangedOnNonAuthority += OnStateChangedOnNonAuthority;
+                _dataSync.OnCurrentStateChangedAction += OnStateChanged;
             }
         }
 
@@ -57,11 +57,11 @@ namespace ScaryMonkey.Utility
 
             if (!_dataSync.IsUnityNull())
             {
-                _dataSync.OnStateChangedOnNonAuthority -= OnStateChangedOnNonAuthority;
+                _dataSync.OnCurrentStateChangedAction -= OnStateChanged;
             }
         }
 
-        private void OnStateChangedOnNonAuthority(ushort newState)
+        private void OnStateChanged(ushort newState)
         {
             if (RunStateLogic)
             {
@@ -79,7 +79,7 @@ namespace ScaryMonkey.Utility
     /// </summary>
     public interface ISynchronizedStateMachineDataSync
     {
-        Action<ushort> OnStateChangedOnNonAuthority { get; set; }
+        Action<ushort> OnCurrentStateChangedAction { get; set; }
 
         RealtimeView RealtimeView { get; }
 
