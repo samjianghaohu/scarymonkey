@@ -6,7 +6,7 @@ namespace ScaryMonkey.Enemy
 {
     public class EnemyRadar : MonoBehaviour
     {
-        public Action<Player> OnPlayerEnterRadar;
+        public Action<Player> OnLocalPlayerEnterRadar;
 
         private void OnTriggerEnter(Collider other)
         {
@@ -15,7 +15,7 @@ namespace ScaryMonkey.Enemy
                 Player enteredPlayer = other.gameObject.GetComponentInParent<Player>();
                 if (enteredPlayer != null)
                 {
-                    OnPlayerEnterRadar?.Invoke(enteredPlayer);
+                    OnLocalPlayerEnterRadar?.Invoke(enteredPlayer);
                 }
             }
         }

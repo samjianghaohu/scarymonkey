@@ -1201,7 +1201,6 @@ GameObject:
   - component: {fileID: 980763213}
   - component: {fileID: 980763215}
   - component: {fileID: 980763214}
-  - component: {fileID: 980763216}
   - component: {fileID: 980763217}
   m_Layer: 18
   m_Name: Enemy
@@ -1267,6 +1266,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radar: {fileID: 1972961196}
+  realtimeTransform: {fileID: 980763217}
   idleHoverAmplitude: 0.16
   idleHoverFrequency: 1.47
   foundPlayerWaitDuration: 3.4
@@ -1309,18 +1309,6 @@ MonoBehaviour:
   - componentID: 2
     component: {fileID: 980763217}
   _childViews: []
---- !u!114 &980763216
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 980763210}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2799494b1fab44469b15e79ca124c501, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &980763217
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,4 +1,6 @@
+using Normal.Realtime;
 using ScaryMonkey.Utility;
+using System.Collections;
 using UnityEngine;
 using Player = GorillaLocomotion.Player;
 
@@ -26,6 +28,9 @@ namespace ScaryMonkey.Enemy
         [SerializeField]
         private EnemyRadar radar;
 
+        [SerializeField]
+        private RealtimeTransform realtimeTransform;
+
         [Header("State Tunings")]
         [SerializeField]
         private float idleHoverAmplitude = 0.5f;
@@ -44,6 +49,8 @@ namespace ScaryMonkey.Enemy
 
         private SynchronizedStateMachine _stateMachine = null;
         private EnemyDataSync _dataSync = null;
+        private RealtimeView _realtimeView = null;
+
         private Player _currentTarget = null;
 
         private Vector3 idleStartPositionWS;
@@ -67,6 +74,8 @@ namespace ScaryMonkey.Enemy
 
             if (_dataSync != null)
             {
+                _realtimeView = _dataSync.RealtimeView;
+
                 // Initialize State Machine. All client needs to do this.
                 _stateMachine = new SynchronizedStateMachine(_dataSync);
                 _stateMachine.AddState((ushort)State.Idle, OnEnterIdle, OnUpdateIdle, null);
@@ -80,7 +89,7 @@ namespace ScaryMonkey.Enemy
 
             if (radar != null)
             {
-                radar.OnPlayerEnterRadar += OnPlayerEnteredRadar;
+                radar.OnLocalPlayerEnterRadar += OnLocalPlayerEnteredRadar;
             }
         }
 
@@ -92,6 +101,8 @@ namespace ScaryMonkey.Enemy
 
         private void Update()
         {
+            EnforceOwner();
+
             _stateMachine?.Update();
         }
 
@@ -99,7 +110,7 @@ namespace ScaryMonkey.Enemy
         {
             if (radar != null)
             {
-                radar.OnPlayerEnterRadar -= OnPlayerEnteredRadar;
+                radar.OnLocalPlayerEnterRadar -= OnLocalPlayerEnteredRadar;
             }
 
             if (_dataSync != null)
@@ -108,6 +119,50 @@ namespace ScaryMonkey.Enemy
             }
 
             _stateMachine?.Dispose();
+        }
+
+        private void EnforceOwner()
+        {
+            if (_realtimeView.realtime == null || !_realtimeView.realtime.connected)
+            {
+                return;
+            }
+
+            if (_realtimeView != null && _realtimeView.isUnownedSelf)
+            {
+                // Enemy all starts unowned. Try have this client claim ownership and become its initial owner.
+                ClaimOwnership();
+            }
+        }
+
+        private void ClaimOwnership()
+        {
+            if (_realtimeView == null || _realtimeView.isOwnedLocallySelf)
+            {
+                return;
+            }
+
+            _realtimeView.RequestOwnership();
+            _realtimeView.preventOwnershipTakeover = true;
+
+            if (realtimeTransform != null)
+            {
+                // Also request ownership of the transform so that movement is synced properly.
+                realtimeTransform.RequestOwnership();
+            }
+
+            // Re-enable takeover after a delay to allow target players to claim ownership.
+            StartCoroutine(AllowTakeoverAfterDelay(1f));
+        }
+
+        private IEnumerator AllowTakeoverAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+
+            if (_realtimeView != null)
+            {
+                _realtimeView.preventOwnershipTakeover = false;
+            }
         }
 
         #endregion
@@ -324,20 +379,17 @@ namespace ScaryMonkey.Enemy
             }
         }
 
-        private void OnPlayerEnteredRadar(Player player)
+        private void OnLocalPlayerEnteredRadar(Player player)
         {
-            Debug.LogError("Local Player entered radar!");
-            if (_stateMachine.CurrentState != (ushort)State.Idle && _stateMachine.CurrentState != (ushort)State.LostTarget)
-            {
-                return;
-            }
-
             if (_currentTarget == player)
             {
                 return;
             }
 
             _currentTarget = player;
+
+            // Enemy started chasing this client. Claim ownership so we are the source of truth.
+            ClaimOwnership();
         }
 
         #endregion
