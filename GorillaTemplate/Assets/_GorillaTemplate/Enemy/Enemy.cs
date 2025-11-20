@@ -4,6 +4,7 @@ using Player = GorillaLocomotion.Player;
 
 namespace ScaryMonkey.Enemy
 {
+    [RequireComponent(typeof(EnemyDataSync))]
     public class Enemy : MonoBehaviour
     {
         #region Enums
@@ -41,8 +42,8 @@ namespace ScaryMonkey.Enemy
         [SerializeField]
         private float lostTargetWaitDuration = 5f;
 
-        private SimpleStateMachine _stateMachine = null;
-
+        private SynchronizedStateMachine _stateMachine = null;
+        private EnemyDataSync _dataSync = null;
         private Player _currentTarget = null;
 
         private Vector3 idleStartPositionWS;
@@ -58,13 +59,22 @@ namespace ScaryMonkey.Enemy
 
         private void Awake()
         {
-            // Initialize State Machine
-            _stateMachine = new SimpleStateMachine();
-            _stateMachine.AddState((ushort)State.Idle, OnEnterIdle, OnUpdateIdle, null);
-            _stateMachine.AddState((ushort)State.FoundTarget, OnEnterFoundTarget, OnUpdateFoundTarget, null);
-            _stateMachine.AddState((ushort)State.ChaseTarget, OnEnterChaseTarget, OnUpdateChaseTarget, OnExitChaseTarget);
-            _stateMachine.AddState((ushort)State.LostTarget, OnEnterLostPlayer, OnUpdateLostPlayer, OnExitLostPlayer);
-           
+            if (!TryGetComponent<EnemyDataSync>(out _dataSync))
+            {
+                Debug.LogError($"Enemy '{name}' is missing required EnemyDataSync component.");
+                return;
+            }
+
+            // Initialize State Machine. All client needs to do this.
+            if (_dataSync != null)
+            {
+                _stateMachine = new SynchronizedStateMachine(_dataSync);
+                _stateMachine.AddState((ushort)State.Idle, OnEnterIdle, OnUpdateIdle, null);
+                _stateMachine.AddState((ushort)State.FoundTarget, OnEnterFoundTarget, OnUpdateFoundTarget, null);
+                _stateMachine.AddState((ushort)State.ChaseTarget, OnEnterChaseTarget, OnUpdateChaseTarget, OnExitChaseTarget);
+                _stateMachine.AddState((ushort)State.LostTarget, OnEnterLostPlayer, OnUpdateLostPlayer, OnExitLostPlayer);
+            }
+
             if (radar != null)
             {
                 radar.OnPlayerEnterRadar += OnPlayerEnteredRadar;
@@ -74,7 +84,8 @@ namespace ScaryMonkey.Enemy
         private void Start()
         {
             idleStartPositionWS = transform.position;
-            _stateMachine.InitializeWithState((ushort)State.Idle);
+            _stateMachine?.InitializeWithState((ushort)State.Idle);
+
         }
 
         private void Update()
@@ -88,6 +99,8 @@ namespace ScaryMonkey.Enemy
             {
                 radar.OnPlayerEnterRadar -= OnPlayerEnteredRadar;
             }
+
+            _stateMachine?.Dispose();
         }
 
         #endregion

@@ -19,14 +19,16 @@ namespace ScaryMonkey.Utility
         public delegate void EnterExitAction(ushort previousState, ushort newState);
         public delegate void UpdateAction();
 
-        private ushort _currentState = 0;
+        protected ushort _currentState = 0;
 
-        private Dictionary<ushort, StateActions> _statesToActions = new Dictionary<ushort, StateActions>();
+        private readonly Dictionary<ushort, StateActions> _statesToActions = new Dictionary<ushort, StateActions>();
 
         #endregion
 
         #region Properties
+
         public ushort CurrentState => _currentState;
+
         #endregion
 
         public SimpleStateMachine()
@@ -47,7 +49,7 @@ namespace ScaryMonkey.Utility
             _statesToActions[state] = actions;
         }
 
-        public void InitializeWithState(ushort initialState)
+        public virtual void InitializeWithState(ushort initialState)
         {
             _currentState = initialState;
             if (_statesToActions.ContainsKey(_currentState))
@@ -60,7 +62,7 @@ namespace ScaryMonkey.Utility
             }
         }
 
-        public void EnterState(ushort newState)
+        public virtual void EnterState(ushort newState)
         {
             if (_statesToActions.ContainsKey(_currentState))
             {
@@ -80,12 +82,17 @@ namespace ScaryMonkey.Utility
             }
         }
 
-        public void Update()
+        public virtual void Update()
         {
             if (_statesToActions.ContainsKey(_currentState))
             {
                 _statesToActions[_currentState].OnUpdate?.Invoke();
             }
+        }
+
+        public virtual void Dispose()
+        {
+            _statesToActions.Clear();
         }
 
         #endregion
