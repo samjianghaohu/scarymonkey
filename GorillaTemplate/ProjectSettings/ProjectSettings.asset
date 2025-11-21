@@ -170,6 +170,7 @@ PlayerSettings:
   applicationIdentifier:
     Android: com.normalvr.gorillatemplate
     Standalone: com.Unity-Technologies.com.unity.template.urp-blank
+    Windows Store Apps: com.Normal-VR.Normcore-Gorilla-Template
     iPhone: com.Unity-Technologies.com.unity.template.urp-blank
   buildNumber:
     Standalone: 0
@@ -864,7 +865,7 @@ PlayerSettings:
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
   metroPackageName: GorillaTag
-  metroPackageVersion: 
+  metroPackageVersion: 1.0.0.0
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
@@ -872,7 +873,7 @@ PlayerSettings:
   metroCertificateNotAfter: 0000000000000000
   metroApplicationDescription: GorillaTag
   wsaImages: {}
-  metroTileShortName: 
+  metroTileShortName: Normcore Gorilla Template
   metroTileShowName: 0
   metroMediumTileShowName: 0
   metroLargeTileShowName: 0
