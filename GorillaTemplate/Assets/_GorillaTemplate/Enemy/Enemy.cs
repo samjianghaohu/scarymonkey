@@ -60,7 +60,8 @@ namespace ScaryMonkey.Enemy
 
         private Player _currentTarget = null;
 
-        private Vector3 idleStartPositionWS;
+        private Vector3 defaultPositionWS;
+        private Quaternion defaultRotationWS;
         private float foundTargetStartTime = 0f;
 
         private Vector3 targetLastSpotPosition;
@@ -122,7 +123,9 @@ namespace ScaryMonkey.Enemy
 
         private void Start()
         {
-            idleStartPositionWS = transform.position;
+            defaultPositionWS = transform.position;
+            defaultRotationWS = transform.rotation;
+
             _stateMachine?.InitializeWithState((ushort)State.Idle);
         }
 
@@ -223,7 +226,8 @@ namespace ScaryMonkey.Enemy
 
         private void OnEnterIdle(ushort previousState, ushort newState)
         {
-            transform.position = idleStartPositionWS;
+            transform.position = defaultPositionWS;
+            transform.rotation = defaultRotationWS;
 
             SetRadarDisabled(disabled: false);
             SetLightEnabled(enable: false);
@@ -241,7 +245,7 @@ namespace ScaryMonkey.Enemy
 
             // Idle behavior: teleport back to starting position and then do sine wave hover
             // TODO: this could be expanded to some more interesting behaviors.
-            var newPosition =  idleStartPositionWS + Vector3.up * (Mathf.Sin(Time.time * idleHoverFrequency) * idleHoverAmplitude);
+            var newPosition =  defaultPositionWS + Vector3.up * (Mathf.Sin(Time.time * idleHoverFrequency) * idleHoverAmplitude);
             transform.position = newPosition;
         }
 
