@@ -70,7 +70,11 @@ namespace ScaryMonkey.Enemy
         #endregion
 
         #region Properties
+
         private Vector3 CurrentTargetPosition => _currentTarget != null ? _currentTarget.headCollider.transform.position : transform.position; // If no target, return own position so that it wouldn't chase anywhere.
+
+        private bool CanAttackPlayer => _stateMachine != null && _stateMachine.CurrentState != (ushort)State.Idle && _stateMachine.CurrentState != (ushort)State.FoundTarget;
+
         #endregion
 
         #region Monobehavior
@@ -124,6 +128,8 @@ namespace ScaryMonkey.Enemy
 
         private void Update()
         {
+            // Enforce ownership in case the owner left.
+            // Local client will try to claim ownership when that happens.
             EnforceOwner();
 
             _stateMachine?.Update();
@@ -153,15 +159,23 @@ namespace ScaryMonkey.Enemy
 
         private void EnforceOwner()
         {
+            if (_realtimeView == null)
+            {
+                return;
+            }
+
             if (_realtimeView.realtime == null || !_realtimeView.realtime.connected)
             {
                 return;
             }
 
-            if (_realtimeView != null && _realtimeView.isUnownedSelf)
+            if (_realtimeView.isUnownedSelf)
             {
                 // Enemy all starts unowned. Try have this client claim ownership and become its initial owner.
                 ClaimOwnership();
+            }else if (_realtimeView.isOwnedLocallySelf && realtimeTransform != null && !realtimeTransform.isOwnedLocallySelf)
+            {
+                ClaimOwnershipForTransform();
             }
         }
 
@@ -175,14 +189,20 @@ namespace ScaryMonkey.Enemy
             _realtimeView.RequestOwnership();
             _realtimeView.preventOwnershipTakeover = true;
 
+            // Also request ownership of the transform so that movement is synced properly.
+            ClaimOwnershipForTransform();
+
+            // Re-enable takeover after a delay to allow target players to claim ownership.
+            StartCoroutine(AllowTakeoverAfterDelay(1f));
+        }
+
+        private void ClaimOwnershipForTransform()
+        {
             if (realtimeTransform != null)
             {
                 // Also request ownership of the transform so that movement is synced properly.
                 realtimeTransform.RequestOwnership();
             }
-
-            // Re-enable takeover after a delay to allow target players to claim ownership.
-            StartCoroutine(AllowTakeoverAfterDelay(1f));
         }
 
         private IEnumerator AllowTakeoverAfterDelay(float delay)
@@ -257,6 +277,8 @@ namespace ScaryMonkey.Enemy
                 _stateMachine.EnterState((ushort)State.ChaseTarget);
                 return;
             }
+
+            transform.LookAt(CurrentTargetPosition, Vector3.up);
         }
 
         #endregion
@@ -449,8 +471,8 @@ namespace ScaryMonkey.Enemy
 
         private bool ShouldRespawnLocalPlayer(Player localPlayer)
         {
-            // Enemy should not respawn local player if it's idling.
-            if (_stateMachine == null || _stateMachine.CurrentState == (ushort)State.Idle)
+            // Enemy should not respawn local player if not the states where attack is allowed.
+            if (!CanAttackPlayer)
             {
                 return false;
             }

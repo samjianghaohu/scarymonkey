@@ -14,6 +14,21 @@ namespace ScaryMonkey.Gameplay
 
         public Action<Player> OnLocalPlayerRespawned;
 
+        private void Awake()
+        {
+            // This component might be used on prefabs that are instantiated at runtime,
+            // in which case we need to find the respawn point reference at runtime as well.
+            // NOTE: This is not the most efficient way. Consider having a respawn point manager singleton and retreive info from there.
+            if (respawnPoint == null)
+            {
+                var objectFound = GameObject.FindGameObjectWithTag("Respawn");
+                if (objectFound != null)
+                {
+                    respawnPoint = objectFound.transform;
+                }
+            }
+        }
+
         private void OnTriggerEnter(Collider other)
         {
             if (respawnPoint == null)
