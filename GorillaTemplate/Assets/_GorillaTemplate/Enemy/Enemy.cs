@@ -1,4 +1,5 @@
 using Normal.Realtime;
+using ScaryMonkey.Gameplay;
 using ScaryMonkey.Utility;
 using System.Collections;
 using UnityEngine;
@@ -27,6 +28,12 @@ namespace ScaryMonkey.Enemy
 
         [SerializeField]
         private EnemyRadar radar;
+
+        [SerializeField]
+        private GameObject enemyLight;
+
+        [SerializeField]
+        private RespawnLocalPlayerVolume hurtBox;
 
         [SerializeField]
         private RealtimeTransform realtimeTransform;
@@ -62,6 +69,10 @@ namespace ScaryMonkey.Enemy
 
         #endregion
 
+        #region Properties
+        private Vector3 CurrentTargetPosition => _currentTarget != null ? _currentTarget.headCollider.transform.position : transform.position; // If no target, return own position so that it wouldn't chase anywhere.
+        #endregion
+
         #region Monobehavior
 
         private void Awake()
@@ -85,11 +96,23 @@ namespace ScaryMonkey.Enemy
 
                 // Listen to synced value changed events so that we can update remote enemies.
                 _dataSync.OnRadarDisabledChangedAction += OnRadarDisabledChanged;
+                _dataSync.OnLightEnabledChangedAction += OnLightEnabledChanged;
             }
 
             if (radar != null)
             {
                 radar.OnLocalPlayerEnterRadar += OnLocalPlayerEnteredRadar;
+            }
+
+            if (enemyLight != null)
+            {
+                enemyLight.SetActive(false);
+            }
+
+            if (hurtBox != null)
+            {
+                hurtBox.ShouldLocalPlayerRespawnCondition = ShouldRespawnLocalPlayer;
+                hurtBox.OnLocalPlayerRespawned += OnRespawnedLocalPlayer;
             }
         }
 
@@ -113,9 +136,16 @@ namespace ScaryMonkey.Enemy
                 radar.OnLocalPlayerEnterRadar -= OnLocalPlayerEnteredRadar;
             }
 
+            if (hurtBox != null)
+            {
+                hurtBox.ShouldLocalPlayerRespawnCondition = null;
+                hurtBox.OnLocalPlayerRespawned -= OnRespawnedLocalPlayer;
+            }
+
             if (_dataSync != null)
             {
                 _dataSync.OnRadarDisabledChangedAction -= OnRadarDisabledChanged;
+                _dataSync.OnLightEnabledChangedAction -= OnLightEnabledChanged;
             }
 
             _stateMachine?.Dispose();
@@ -176,6 +206,7 @@ namespace ScaryMonkey.Enemy
             transform.position = idleStartPositionWS;
 
             SetRadarDisabled(disabled: false);
+            SetLightEnabled(enable: false);
             // TODO: Add some one-time audiovisual effect for teleporting.
         }
 
@@ -204,6 +235,9 @@ namespace ScaryMonkey.Enemy
             // TODO: Consider keeping rader active and allow choosing the closest target.
             SetRadarDisabled(disabled: true);
 
+            // Turn on light to make target aware of its presence.
+            SetLightEnabled(enable: true);
+
             foundTargetStartTime = Time.time;
 
             // TODO: Add some one-time audiovisual effect for spotting the player.
@@ -231,7 +265,7 @@ namespace ScaryMonkey.Enemy
 
         private void OnEnterChaseTarget(ushort previousState, ushort newState)
         {
-            targetLastSpotPosition = _currentTarget.transform.position;
+            targetLastSpotPosition = CurrentTargetPosition;
         }
 
         private void OnUpdateChaseTarget()
@@ -254,16 +288,14 @@ namespace ScaryMonkey.Enemy
             else
             {
                 // Move towards target
-                var directionToTarget = (_currentTarget.transform.position - transform.position).normalized;
+                var directionToTarget = (CurrentTargetPosition - transform.position).normalized;
                 transform.position += chaseSpeed * Time.deltaTime * directionToTarget;
             }
-
-            // TODO: Add logic for catching the player.
         }
 
         private bool CheckIfPlayerInLineOfSight(out Vector3 lastSeenPosition)
         {
-            var enemyToTarget = _currentTarget.transform.position - transform.position;
+            var enemyToTarget = CurrentTargetPosition - transform.position;
             var rayDirection = enemyToTarget.normalized;
             var rayMaxDistance = enemyToTarget.magnitude;
 
@@ -358,7 +390,7 @@ namespace ScaryMonkey.Enemy
 
         #region Player Detection
 
-        public void SetRadarDisabled(bool disabled)
+        private void SetRadarDisabled(bool disabled)
         {
             if (radar != null)
             {
@@ -371,11 +403,32 @@ namespace ScaryMonkey.Enemy
             }
         }
 
+        private void SetLightEnabled(bool enable)
+        {
+            if (enemyLight != null)
+            {
+                enemyLight.SetActive(enable);
+            }
+
+            if (_dataSync!= null)
+            {
+                _dataSync.AuthoritySetLightEnabled(enable);
+            }
+        }
+
         private void OnRadarDisabledChanged(bool disabled)
         {
             if (radar != null)
             {
                 radar.gameObject.SetActive(!disabled);
+            }
+        }
+
+        private void OnLightEnabledChanged(bool enabled)
+        {
+            if (enemyLight != null)
+            {
+                enemyLight.SetActive(enabled);
             }
         }
 
@@ -390,6 +443,31 @@ namespace ScaryMonkey.Enemy
 
             // Enemy started chasing this client. Claim ownership so we are the source of truth.
             ClaimOwnership();
+        }
+
+        private bool ShouldRespawnLocalPlayer(Player localPlayer)
+        {
+            // Enemy should not respawn local player if it's idling.
+            if (_stateMachine == null || _stateMachine.CurrentState == (ushort)State.Idle)
+            {
+                return false;
+            }
+
+            // Enemy should only respawn the local player if it's currently targeting them.
+            if (_currentTarget != localPlayer)
+            {
+                return false;
+            }
+
+            // Make sure the local player this enemy is targetting is also the owner!
+            return _dataSync != null &&  _dataSync.realtimeView.isOwnedLocallySelf;
+        }
+
+        private void OnRespawnedLocalPlayer(Player localPlayer)
+        {
+            // Force enemy to lose target state after touching and respawning the local player (i.e. its target).
+            _currentTarget = null;
+            _stateMachine.EnterState((ushort)State.LostTarget);
         }
 
         #endregion

@@ -46,7 +46,8 @@ namespace Normal.Utility {
             }
 
             // Pick a random room
-            var randomIndex = Random.Range(0, _roomNames.Count);
+            //var randomIndex = Random.Range(0, _roomNames.Count);
+            var randomIndex = 0; // Temporarily disable random room selection for testing
             var roomName = _roomNames[randomIndex];
 
             // Connect

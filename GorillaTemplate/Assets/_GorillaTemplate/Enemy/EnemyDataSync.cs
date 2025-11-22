@@ -12,11 +12,15 @@ namespace ScaryMonkey.Enemy
 
         [RealtimeProperty(2, true, true)]
         private bool _radarDisabled;
+
+        [RealtimeProperty(3, true, true)]
+        private bool _lightEnabled;
     }
 
     public partial class EnemyDataSync : RealtimeComponent<EnemyDataSyncModel>, ISynchronizedStateMachineDataSync
     {
         public Action<bool> OnRadarDisabledChangedAction;
+        public Action<bool> OnLightEnabledChangedAction;
 
         protected override void OnRealtimeModelReplaced(EnemyDataSyncModel previousModel, EnemyDataSyncModel currentModel)
         {
@@ -24,18 +28,21 @@ namespace ScaryMonkey.Enemy
             {
                 previousModel.currentStateDidChange  -= OnCurrentStateChanged;
                 previousModel.radarDisabledDidChange -= OnRadarDisabledChanged;
+                previousModel.lightEnabledDidChange  -= OnLightEnabledChanged;
             }
 
             if (currentModel != null)
             {
                 currentModel.currentStateDidChange += OnCurrentStateChanged;
                 currentModel.radarDisabledDidChange += OnRadarDisabledChanged;
+                currentModel.lightEnabledDidChange += OnLightEnabledChanged;
 
                 if (model.isFreshModel)
                 {
                     // Locally created this model, give default values
                     currentModel.currentState = 0;
                     currentModel.radarDisabled = false;
+                    currentModel.lightEnabled = false;
                 }
             }
         }
@@ -53,6 +60,21 @@ namespace ScaryMonkey.Enemy
             }
 
             model.radarDisabled = disabled;
+        }
+
+        public void AuthoritySetLightEnabled(bool enabled)
+        {
+            if (!realtimeView.isOwnedLocallySelf)
+            {
+                return;
+            }
+
+            if (model.lightEnabled == enabled)
+            {
+                return;
+            }
+
+            model.lightEnabled = enabled;
         }
 
         #region ISynchronizedStateMachineDataSync Implementation
@@ -88,6 +110,11 @@ namespace ScaryMonkey.Enemy
         private void OnRadarDisabledChanged(EnemyDataSyncModel model, bool value)
         {
             OnRadarDisabledChangedAction?.Invoke(value);
+        }
+
+        private void OnLightEnabledChanged(EnemyDataSyncModel model, bool value)
+        {
+            OnLightEnabledChangedAction?.Invoke(value);
         }
 
         #endregion
