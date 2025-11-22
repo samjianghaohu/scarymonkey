@@ -288,8 +288,9 @@ namespace ScaryMonkey.Enemy
             else
             {
                 // Move towards target
-                var directionToTarget = (CurrentTargetPosition - transform.position).normalized;
+                var directionToTarget = (targetLastSpotPosition - transform.position).normalized;
                 transform.position += chaseSpeed * Time.deltaTime * directionToTarget;
+                transform.LookAt(targetLastSpotPosition, Vector3.up);
             }
         }
 
@@ -314,7 +315,7 @@ namespace ScaryMonkey.Enemy
                 if (hitPlayer != null && hitPlayer == _currentTarget)
                 {
                     // Target is in line of sight. Update last seen position with target's current position.
-                    lastSeenPosition = _currentTarget.transform.position;
+                    lastSeenPosition = CurrentTargetPosition;
                     return true;
                 }
             }
@@ -370,6 +371,7 @@ namespace ScaryMonkey.Enemy
                 // Move towards target's last seen position.
                 var directionToLastSpot = (targetLastSpotPosition - transform.position).normalized;
                 transform.position += chaseSpeed * Time.deltaTime * directionToLastSpot;
+                transform.LookAt(targetLastSpotPosition, Vector3.up);
 
                 if ((transform.position - targetLastSpotPosition).sqrMagnitude <= (DISTANCE_EPSILON * DISTANCE_EPSILON))
                 {
