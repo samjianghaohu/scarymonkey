@@ -437,5 +437,52 @@ namespace GorillaLocomotion
             velocityHistory[velocityIndex] = currentVelocity;
             lastPosition = transform.position;
         }
+
+        // Use head as a reference for where we want to move the player to visually
+        public void TeleportHead(Vector3 headTargetPosition, Quaternion headTargetRotation, bool resetVelocity = true)
+        {
+            Vector3 headLocalOffset = transform.InverseTransformVector(headCollider.transform.position - transform.position);
+
+            Vector3 rootTargetPosition = headTargetPosition - headTargetRotation * headLocalOffset;
+
+            // Directly use the target rotation for root. We don't want to apply any offset to rotate the body in order to maintain head rotation.
+            TeleportInternal(rootTargetPosition, headTargetRotation, resetVelocity);
+        }
+
+        private void TeleportInternal(Vector3 targetPosition, Quaternion targetRotation, bool resetVelocity = true)
+        {
+            // Move player to the desired position and rotation
+            transform.SetPositionAndRotation(targetPosition, targetRotation);
+
+            // Keep rigidbody in sync
+            if (playerRigidBody != null)
+            {
+                playerRigidBody.position = targetPosition;
+                playerRigidBody.rotation = targetRotation;
+
+                if (resetVelocity)
+                {
+                    playerRigidBody.SetLinearVelocity(Vector3.zero);
+                    playerRigidBody.angularVelocity = Vector3.zero;
+                }
+            }
+
+            // Reset cached state so locomotion code doesn't try to resolve large deltas
+            lastHeadPosition = headCollider.transform.position;
+            lastLeftHandPosition = PositionWithOffset(leftHandTransform, leftHandOffset);
+            lastRightHandPosition = PositionWithOffset(rightHandTransform, rightHandOffset);
+            lastPosition = transform.position;
+
+            wasLeftHandTouching = false;
+            wasRightHandTouching = false;
+
+            if (leftHandFollower != null) leftHandFollower.position = lastLeftHandPosition;
+            if (rightHandFollower != null) rightHandFollower.position = lastRightHandPosition;
+
+            velocityHistory = new Vector3[velocityHistorySize];
+            velocityIndex = 0;
+            denormalizedVelocityAverage = Vector3.zero;
+            currentVelocity = Vector3.zero;
+        }
     }
 }

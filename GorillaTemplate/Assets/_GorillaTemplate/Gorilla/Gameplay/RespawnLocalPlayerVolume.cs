@@ -35,8 +35,7 @@ namespace ScaryMonkey.Gameplay
                     return;
                 }
 
-                enteredPlayer.transform.SetPositionAndRotation(respawnPoint.position, respawnPoint.rotation);
-                enteredPlayer.GetComponent<Rigidbody>().linearVelocity = Vector3.zero;
+                enteredPlayer.TeleportHead(respawnPoint.position, respawnPoint.rotation);
 
                 OnLocalPlayerRespawned?.Invoke(enteredPlayer);
             }
