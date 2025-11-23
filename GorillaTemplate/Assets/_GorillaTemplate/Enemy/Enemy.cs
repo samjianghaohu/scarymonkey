@@ -44,6 +44,9 @@ namespace ScaryMonkey.Enemy
 
         [Header("State Tunings")]
         [SerializeField]
+        private float lineOfSightMaxDistance = 5f;
+
+        [SerializeField]
         private float idleHoverAmplitude = 0.5f;
 
         [SerializeField]
@@ -321,7 +324,7 @@ namespace ScaryMonkey.Enemy
             }
 
             // Do a raycast to see if enemy has line of sight to the player
-            bool canSeeTarget = CheckIfPlayerInLineOfSight(out targetLastSpotPosition);
+            bool canSeeTarget = CheckIfTargetInLineOfSight(out targetLastSpotPosition);
             if (!canSeeTarget)
             {
                 // Lost sight of target.
@@ -335,38 +338,6 @@ namespace ScaryMonkey.Enemy
                 transform.position += chaseSpeed * Time.deltaTime * directionToTarget;
                 transform.LookAt(targetLastSpotPosition, Vector3.up);
             }
-        }
-
-        private bool CheckIfPlayerInLineOfSight(out Vector3 lastSeenPosition)
-        {
-            var enemyToTarget = CurrentTargetPosition - transform.position;
-            var rayDirection = enemyToTarget.normalized;
-            var rayMaxDistance = enemyToTarget.magnitude;
-
-            // TODO: Incorporate a distance threshold. Enemy shouldn't infinite eye sight. 
-            if (Physics.Raycast(
-                origin: transform.position,
-                rayDirection,
-                out RaycastHit hitInfo,
-                rayMaxDistance,
-                layerMask: LayerMask.GetMask("Default", "Gorilla Collider"),
-                queryTriggerInteraction: QueryTriggerInteraction.Ignore
-                ))
-            {
-                // Hit a player
-                var hitPlayer = hitInfo.collider.GetComponentInParent<Player>();
-                if (hitPlayer != null && hitPlayer == _currentTarget)
-                {
-                    // Target is in line of sight. Update last seen position with target's current position.
-                    lastSeenPosition = CurrentTargetPosition;
-                    return true;
-                }
-            }
-
-            // In all other case, target is not in line of sight.
-            // Keep last seen position as it was.
-            lastSeenPosition = targetLastSpotPosition;
-            return false;
         }
 
         private void OnExitChaseTarget(ushort previousState, ushort newState)
@@ -481,6 +452,19 @@ namespace ScaryMonkey.Enemy
         {
             if (_currentTarget == player)
             {
+                // Already chasing this player. Don't do anything.
+                return;
+            }
+
+            var targetPosition = player.headCollider.transform.position;
+            if (!CheckIfPlayerInLineOfSight(targetPosition, out Player hitPlayer, out _))
+            {
+                return;
+            }
+
+            if (hitPlayer != player)
+            {
+                Debug.LogWarning("Enemy detected a player different from local player. This shouldn't happen.");
                 return;
             }
 
@@ -513,6 +497,61 @@ namespace ScaryMonkey.Enemy
             // Force enemy to lose target state after touching and respawning the local player (i.e. its target).
             _currentTarget = null;
             _stateMachine.EnterState((ushort)State.LostTarget);
+        }
+
+        private bool CheckIfTargetInLineOfSight(out Vector3 lastSeenPosition)
+        {
+            if (CheckIfPlayerInLineOfSight(CurrentTargetPosition, out Player hitPlayer, out float hitDistance))
+            {
+                if (hitPlayer == _currentTarget) // This really should always be true. But check it still.
+                {
+                    if (hitDistance <= lineOfSightMaxDistance)
+                    {
+                        // Target is in line of sight and within distance. Update last seen position with target's current position.
+                        lastSeenPosition = CurrentTargetPosition;
+                        return true;
+                    }
+                    else
+                    {
+                        // Target is in line of sight but outside of range. Clamp the last seen position inside the range.
+                        lastSeenPosition = transform.position + (CurrentTargetPosition - transform.position).normalized * lineOfSightMaxDistance;
+                        return false;
+                    }
+                }
+            }
+
+            // In all other case, target is not in line of sight, within or out of the range.
+            // Keep last seen position as it was.
+            lastSeenPosition = targetLastSpotPosition;
+            return false;
+        }
+
+        private bool CheckIfPlayerInLineOfSight(Vector3 targetPosition, out Player hitPlayer, out float hitDistance)
+        {
+            var enemyToTarget = targetPosition - transform.position;
+            var rayDirection = enemyToTarget.normalized;
+            var rayMaxDistance = enemyToTarget.magnitude;
+            hitDistance = rayMaxDistance;
+
+            if (Physics.Raycast(
+                origin: transform.position,
+                rayDirection,
+                out RaycastHit hitInfo,
+                rayMaxDistance,
+                layerMask: LayerMask.GetMask("Default", "Gorilla Collider"),
+                queryTriggerInteraction: QueryTriggerInteraction.Ignore
+                ))
+            {
+                // Hit a player
+                hitPlayer = hitInfo.collider.GetComponentInParent<Player>();
+                hitDistance = hitInfo.distance;
+            }
+            else
+            {
+                hitPlayer = null;
+            }
+
+            return hitPlayer != null;
         }
 
         #endregion

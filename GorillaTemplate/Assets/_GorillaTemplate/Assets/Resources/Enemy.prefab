@@ -85,11 +85,12 @@ MonoBehaviour:
   hurtBox: {fileID: 8325224184505334066}
   sfxPlayer: {fileID: 7559035917172163474}
   realtimeTransform: {fileID: 5468879863621670169}
+  lineOfSightMaxDistance: 5
   idleHoverAmplitude: 0.16
   idleHoverFrequency: 1.47
   foundPlayerWaitDuration: 3.4
-  chaseSpeed: 1
-  lostTargetWaitDuration: 5
+  chaseSpeed: 1.5
+  lostTargetWaitDuration: 3.5
   localAlertSFX: {fileID: 8300000, guid: 9889925b74646a44d88c3374ad06d521, type: 3}
   allChaseSFX: {fileID: 8300000, guid: d3f81ba38e168ed439c1460ac0ce8648, type: 3}
 --- !u!114 &4625290816569654730
