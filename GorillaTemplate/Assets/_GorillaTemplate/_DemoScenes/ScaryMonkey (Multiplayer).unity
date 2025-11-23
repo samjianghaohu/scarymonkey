@@ -763,10 +763,10 @@ Light:
   serializedVersion: 11
   m_Type: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1.55
-  m_Range: 10
-  m_SpotAngle: 59.76719
-  m_InnerSpotAngle: 51.56926
+  m_Intensity: 0.8
+  m_Range: 5
+  m_SpotAngle: 47.860317
+  m_InnerSpotAngle: 39.662388
   m_CookieSize: 10
   m_Shadows:
     m_Type: 0
@@ -6545,7 +6545,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 0354f45d2f397c64ba868d901b4e430b, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.2
+  m_Volume: 0.4
   m_Pitch: 1
   Loop: 1
   Mute: 0

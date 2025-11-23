@@ -318,7 +318,7 @@ namespace ScaryMonkey.Enemy
             SetLightMode(LightMode.ChaseTarget);
             SetLightEnabled(enable: true);
 
-            PlaySFX(localAlertSFX, volume: 0.8f, randomPitch: true);
+            PlaySFX(localAlertSFX, randomPitch: true);
         }
 
         private void OnUpdateFoundTarget()
@@ -667,7 +667,7 @@ namespace ScaryMonkey.Enemy
         {
             if (play)
             {
-                PlaySFX(allChaseSFX, volume: 0.8f, loop: true);
+                PlaySFX(allChaseSFX, loop: true);
             }
             else
             {
