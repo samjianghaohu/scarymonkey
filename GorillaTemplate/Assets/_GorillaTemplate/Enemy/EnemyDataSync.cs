@@ -15,12 +15,16 @@ namespace ScaryMonkey.Enemy
 
         [RealtimeProperty(3, true, true)]
         private bool _lightEnabled;
+
+        [RealtimeProperty(4, true, true)]
+        private bool _chaseSFXPlaying;
     }
 
     public partial class EnemyDataSync : RealtimeComponent<EnemyDataSyncModel>, ISynchronizedStateMachineDataSync
     {
         public Action<bool> OnRadarDisabledChangedAction;
         public Action<bool> OnLightEnabledChangedAction;
+        public Action<bool> OnChaseSFXPlayingChangedAction;
 
         protected override void OnRealtimeModelReplaced(EnemyDataSyncModel previousModel, EnemyDataSyncModel currentModel)
         {
@@ -29,6 +33,7 @@ namespace ScaryMonkey.Enemy
                 previousModel.currentStateDidChange  -= OnCurrentStateChanged;
                 previousModel.radarDisabledDidChange -= OnRadarDisabledChanged;
                 previousModel.lightEnabledDidChange  -= OnLightEnabledChanged;
+                previousModel.chaseSFXPlayingDidChange -= OnChaseSFXPlayingChanged;
             }
 
             if (currentModel != null)
@@ -36,6 +41,7 @@ namespace ScaryMonkey.Enemy
                 currentModel.currentStateDidChange += OnCurrentStateChanged;
                 currentModel.radarDisabledDidChange += OnRadarDisabledChanged;
                 currentModel.lightEnabledDidChange += OnLightEnabledChanged;
+                currentModel.chaseSFXPlayingDidChange += OnChaseSFXPlayingChanged;
 
                 if (model.isFreshModel)
                 {
@@ -43,6 +49,7 @@ namespace ScaryMonkey.Enemy
                     currentModel.currentState = 0;
                     currentModel.radarDisabled = false;
                     currentModel.lightEnabled = false;
+                    currentModel.chaseSFXPlaying = false;
                 }
             }
         }
@@ -75,6 +82,21 @@ namespace ScaryMonkey.Enemy
             }
 
             model.lightEnabled = enabled;
+        }
+
+        public void AuthoritySetChaseSFXPlaying(bool playing)
+        {
+            if (!realtimeView.isOwnedLocallySelf)
+            {
+                return;
+            }
+
+            if (model.chaseSFXPlaying == playing)
+            {
+                return;
+            }
+
+            model.chaseSFXPlaying = playing;
         }
 
         #region ISynchronizedStateMachineDataSync Implementation
@@ -115,6 +137,11 @@ namespace ScaryMonkey.Enemy
         private void OnLightEnabledChanged(EnemyDataSyncModel model, bool value)
         {
             OnLightEnabledChangedAction?.Invoke(value);
+        }
+
+        private void OnChaseSFXPlayingChanged(EnemyDataSyncModel model, bool value)
+        {
+            OnChaseSFXPlayingChangedAction?.Invoke(value);
         }
 
         #endregion

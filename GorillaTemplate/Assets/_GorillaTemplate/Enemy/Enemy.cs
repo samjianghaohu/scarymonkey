@@ -26,6 +26,7 @@ namespace ScaryMonkey.Enemy
 
         #region Fields
 
+        [Header("Components")]
         [SerializeField]
         private EnemyRadar radar;
 
@@ -34,6 +35,9 @@ namespace ScaryMonkey.Enemy
 
         [SerializeField]
         private RespawnLocalPlayerVolume hurtBox;
+
+        [SerializeField]
+        private AudioSource sfxPlayer;
 
         [SerializeField]
         private RealtimeTransform realtimeTransform;
@@ -53,6 +57,13 @@ namespace ScaryMonkey.Enemy
 
         [SerializeField]
         private float lostTargetWaitDuration = 5f;
+
+        [Header("Audiovisual Effects")]
+        [SerializeField]
+        private AudioClip localAlertSFX;
+
+        [SerializeField]
+        private AudioClip allChaseSFX;
 
         private SynchronizedStateMachine _stateMachine = null;
         private EnemyDataSync _dataSync = null;
@@ -102,6 +113,7 @@ namespace ScaryMonkey.Enemy
                 // Listen to synced value changed events so that we can update remote enemies.
                 _dataSync.OnRadarDisabledChangedAction += OnRadarDisabledChanged;
                 _dataSync.OnLightEnabledChangedAction += OnLightEnabledChanged;
+                _dataSync.OnChaseSFXPlayingChangedAction += OnChaseSFXPlayingChanged;
             }
 
             if (radar != null)
@@ -155,6 +167,7 @@ namespace ScaryMonkey.Enemy
             {
                 _dataSync.OnRadarDisabledChangedAction -= OnRadarDisabledChanged;
                 _dataSync.OnLightEnabledChangedAction -= OnLightEnabledChanged;
+                _dataSync.OnChaseSFXPlayingChangedAction -= OnChaseSFXPlayingChanged;
             }
 
             _stateMachine?.Dispose();
@@ -226,11 +239,13 @@ namespace ScaryMonkey.Enemy
 
         private void OnEnterIdle(ushort previousState, ushort newState)
         {
-            transform.position = defaultPositionWS;
-            transform.rotation = defaultRotationWS;
-
             SetRadarDisabled(disabled: false);
             SetLightEnabled(enable: false);
+
+            SetChasingSFXPlaying(false);
+
+            transform.SetPositionAndRotation(defaultPositionWS, defaultRotationWS);
+
             // TODO: Add some one-time audiovisual effect for teleporting.
         }
 
@@ -255,6 +270,8 @@ namespace ScaryMonkey.Enemy
 
         private void OnEnterFoundTarget(ushort previousState, ushort newState)
         {
+            foundTargetStartTime = Time.time;
+
             // Disable rader so the enemy can focus on the spotted target.
             // TODO: Consider keeping rader active and allow choosing the closest target.
             SetRadarDisabled(disabled: true);
@@ -262,9 +279,7 @@ namespace ScaryMonkey.Enemy
             // Turn on light to make target aware of its presence.
             SetLightEnabled(enable: true);
 
-            foundTargetStartTime = Time.time;
-
-            // TODO: Add some one-time audiovisual effect for spotting the player.
+            PlaySFX(localAlertSFX, volume: 0.8f, randomPitch: true);
         }
 
         private void OnUpdateFoundTarget()
@@ -292,6 +307,8 @@ namespace ScaryMonkey.Enemy
         private void OnEnterChaseTarget(ushort previousState, ushort newState)
         {
             targetLastSpotPosition = CurrentTargetPosition;
+
+            SetChasingSFXPlaying(true);
         }
 
         private void OnUpdateChaseTarget()
@@ -496,6 +513,74 @@ namespace ScaryMonkey.Enemy
             // Force enemy to lose target state after touching and respawning the local player (i.e. its target).
             _currentTarget = null;
             _stateMachine.EnterState((ushort)State.LostTarget);
+        }
+
+        #endregion
+
+        #region SFX
+
+        private void SetChasingSFXPlaying(bool playing)
+        {
+            LocalPlayOrStopChasingSFX(playing);
+
+            if (_dataSync != null)
+            {
+                _dataSync.AuthoritySetChaseSFXPlaying(playing);
+            }
+        }
+
+        private void OnChaseSFXPlayingChanged(bool playing)
+        {
+            if (_dataSync == null || _dataSync.realtimeView.isOwnedLocallySelf)
+            {
+                // Local/Authority player already played the chase sfx before setting the synchronized value.
+                return;
+            }
+
+            // Play or stop the SFX on remote client.
+            LocalPlayOrStopChasingSFX(playing);
+        }
+
+        private void LocalPlayOrStopChasingSFX(bool play)
+        {
+            if (play)
+            {
+                PlaySFX(allChaseSFX, volume: 0.8f, loop: true);
+            }
+            else
+            {
+                StopSFX();
+            }
+        }
+
+        private void PlaySFX(AudioClip clip, float volume = 1f, bool loop = false, bool randomPitch = false)
+        {
+            if (sfxPlayer == null || clip == null)
+            {
+                return;
+            }
+
+            float pitch = 1f;
+            if (randomPitch)
+            {
+                pitch += Random.Range(-0.1f, 0.1f);
+            }
+
+            StopSFX();
+
+            sfxPlayer.clip = clip;
+            sfxPlayer.volume = volume;
+            sfxPlayer.loop = loop;
+            sfxPlayer.pitch = pitch;
+            sfxPlayer.Play();
+        }
+
+        private void StopSFX()
+        {
+            if (sfxPlayer != null)
+            {
+                sfxPlayer.Stop();
+            }
         }
 
         #endregion
