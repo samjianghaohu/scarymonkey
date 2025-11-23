@@ -6280,7 +6280,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8831524098203269302, guid: 5a221d46a09b7d54f98b12b55c7ee2fb, type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8831524098203269302, guid: 5a221d46a09b7d54f98b12b55c7ee2fb, type: 3}
       propertyPath: _holdLeftMouseToTurn
