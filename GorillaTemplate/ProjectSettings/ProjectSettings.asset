@@ -12,8 +12,8 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: Normal VR
-  productName: Normcore Gorilla Template
+  companyName: ScaryMonkey
+  productName: ScaryMonkey Test
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -145,6 +145,8 @@ PlayerSettings:
   bundleVersion: 0.1.0
   preloadedAssets:
   - {fileID: -944628639613478452, guid: d30355ffd2a462f48963c08101163154, type: 3}
+  - {fileID: -3609140502897449395, guid: 71ac4baac7525554883c15d97db4f048, type: 2}
+  - {fileID: 11400000, guid: a1c5c0da903480744ab1b7b38376f126, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
