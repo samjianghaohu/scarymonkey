@@ -30,6 +30,7 @@ namespace ScaryMonkey.Enemy
 
         #region Constants
         private const float DISTANCE_EPSILON = 0.1f;
+        private const float APPROXIMATION_RADIUS = 0.5f;
         #endregion
 
         #region Fields
@@ -397,6 +398,26 @@ namespace ScaryMonkey.Enemy
 
             // Change light color to indicate the state change.
             SetLightMode(LightMode.LostTarget);
+
+            var enemyToTarget = targetLastSpotPosition - transform.position;
+            var rayDirection = enemyToTarget.normalized;
+            var rayMaxDistance = enemyToTarget.magnitude;
+
+            // Check and make sure there's nothing between enemy and the last seen position.
+            if (Physics.Raycast(
+                origin: transform.position,
+                rayDirection,
+                out RaycastHit hitInfo,
+                rayMaxDistance,
+                layerMask: LayerMask.GetMask("Default", "Gorilla Collider"),
+                queryTriggerInteraction: QueryTriggerInteraction.Ignore
+                ))
+            {
+                // There's something obstruct enemy and the last seen target position.
+                // Update the last seen position to be around the hit.
+                // We push the enemy further back by an approximation radius to prevent clipping.
+                targetLastSpotPosition = transform.position + rayDirection * (hitInfo.distance - APPROXIMATION_RADIUS);
+            }
         }
 
         private void OnUpdateLostPlayer()
