@@ -18,6 +18,9 @@ namespace ScaryMonkey.Enemy
 
         [RealtimeProperty(4, true, true)]
         private bool _chaseSFXPlaying;
+
+        [RealtimeProperty(5, true, true)]
+        private ushort _currentLightMode;
     }
 
     public partial class EnemyDataSync : RealtimeComponent<EnemyDataSyncModel>, ISynchronizedStateMachineDataSync
@@ -25,6 +28,7 @@ namespace ScaryMonkey.Enemy
         public Action<bool> OnRadarDisabledChangedAction;
         public Action<bool> OnLightEnabledChangedAction;
         public Action<bool> OnChaseSFXPlayingChangedAction;
+        public Action<ushort> OnCurrentLightModeChangedAction;
 
         protected override void OnRealtimeModelReplaced(EnemyDataSyncModel previousModel, EnemyDataSyncModel currentModel)
         {
@@ -34,6 +38,7 @@ namespace ScaryMonkey.Enemy
                 previousModel.radarDisabledDidChange -= OnRadarDisabledChanged;
                 previousModel.lightEnabledDidChange  -= OnLightEnabledChanged;
                 previousModel.chaseSFXPlayingDidChange -= OnChaseSFXPlayingChanged;
+                previousModel.currentLightModeDidChange -= OnCurrentLightModeChanged;
             }
 
             if (currentModel != null)
@@ -42,6 +47,7 @@ namespace ScaryMonkey.Enemy
                 currentModel.radarDisabledDidChange += OnRadarDisabledChanged;
                 currentModel.lightEnabledDidChange += OnLightEnabledChanged;
                 currentModel.chaseSFXPlayingDidChange += OnChaseSFXPlayingChanged;
+                currentModel.currentLightModeDidChange += OnCurrentLightModeChanged;
 
                 if (model.isFreshModel)
                 {
@@ -50,6 +56,7 @@ namespace ScaryMonkey.Enemy
                     currentModel.radarDisabled = false;
                     currentModel.lightEnabled = false;
                     currentModel.chaseSFXPlaying = false;
+                    currentModel.currentLightMode = 0;
                 }
             }
         }
@@ -99,6 +106,21 @@ namespace ScaryMonkey.Enemy
             model.chaseSFXPlaying = playing;
         }
 
+        public void AuthoritySetCurrentLightMode(ushort mode)
+        {
+            if (!realtimeView.isOwnedLocallySelf)
+            {
+                return;
+            }
+
+            if (model.currentLightMode == mode)
+            {
+                return;
+            }
+
+            model.currentLightMode = mode;
+        }
+
         #region ISynchronizedStateMachineDataSync Implementation
 
         public Action<ushort> OnCurrentStateChangedAction { get; set; }
@@ -142,6 +164,11 @@ namespace ScaryMonkey.Enemy
         private void OnChaseSFXPlayingChanged(EnemyDataSyncModel model, bool value)
         {
             OnChaseSFXPlayingChangedAction?.Invoke(value);
+        }
+
+        private void OnCurrentLightModeChanged(EnemyDataSyncModel model, ushort value)
+        {
+            OnCurrentLightModeChangedAction?.Invoke(value);
         }
 
         #endregion

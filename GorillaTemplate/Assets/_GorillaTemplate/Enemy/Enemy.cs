@@ -11,6 +11,7 @@ namespace ScaryMonkey.Enemy
     public class Enemy : MonoBehaviour
     {
         #region Enums
+
         private enum State : ushort
         {
             Idle,
@@ -18,6 +19,13 @@ namespace ScaryMonkey.Enemy
             ChaseTarget,
             LostTarget
         }
+
+        private enum LightMode : ushort
+        {
+            ChaseTarget = 0,
+            LostTarget = 1
+        }
+
         #endregion
 
         #region Constants
@@ -31,7 +39,7 @@ namespace ScaryMonkey.Enemy
         private EnemyRadar radar;
 
         [SerializeField]
-        private GameObject enemyLight;
+        private Light enemyLight;
 
         [SerializeField]
         private RespawnLocalPlayerVolume hurtBox;
@@ -68,6 +76,12 @@ namespace ScaryMonkey.Enemy
         [SerializeField]
         private AudioClip allChaseSFX;
 
+        [SerializeField]
+        private Color chaseTargetLightColor;
+
+        [SerializeField]
+        private Color lostTargetLightColor;
+
         private SynchronizedStateMachine _stateMachine = null;
         private EnemyDataSync _dataSync = null;
         private RealtimeView _realtimeView = null;
@@ -82,6 +96,8 @@ namespace ScaryMonkey.Enemy
         private bool reachedTargetLastSpotPosition = false;
         private float reachedTargetLastSpotTime = 0f;
 
+        private LightMode _currentLightMode = LightMode.ChaseTarget;
+
         #endregion
 
         #region Properties
@@ -89,6 +105,22 @@ namespace ScaryMonkey.Enemy
         private Vector3 CurrentTargetPosition => _currentTarget != null ? _currentTarget.headCollider.transform.position : transform.position; // If no target, return own position so that it wouldn't chase anywhere.
 
         private bool CanAttackPlayer => _stateMachine != null && _stateMachine.CurrentState != (ushort)State.Idle && _stateMachine.CurrentState != (ushort)State.FoundTarget;
+
+        private Color CurrentLightColor
+        {
+            get
+            {
+                switch (_currentLightMode)
+                {
+                    case LightMode.ChaseTarget:
+                        return chaseTargetLightColor;
+                    case LightMode.LostTarget:
+                        return lostTargetLightColor;
+                    default:
+                        return chaseTargetLightColor;
+                }
+            }
+        }
 
         #endregion
 
@@ -117,6 +149,7 @@ namespace ScaryMonkey.Enemy
                 _dataSync.OnRadarDisabledChangedAction += OnRadarDisabledChanged;
                 _dataSync.OnLightEnabledChangedAction += OnLightEnabledChanged;
                 _dataSync.OnChaseSFXPlayingChangedAction += OnChaseSFXPlayingChanged;
+                _dataSync.OnCurrentLightModeChangedAction += OnLightModeChanged;
             }
 
             if (radar != null)
@@ -126,7 +159,7 @@ namespace ScaryMonkey.Enemy
 
             if (enemyLight != null)
             {
-                enemyLight.SetActive(false);
+                enemyLight.gameObject.SetActive(false);
             }
 
             if (hurtBox != null)
@@ -171,6 +204,7 @@ namespace ScaryMonkey.Enemy
                 _dataSync.OnRadarDisabledChangedAction -= OnRadarDisabledChanged;
                 _dataSync.OnLightEnabledChangedAction -= OnLightEnabledChanged;
                 _dataSync.OnChaseSFXPlayingChangedAction -= OnChaseSFXPlayingChanged;
+                _dataSync.OnCurrentLightModeChangedAction -= OnLightModeChanged;
             }
 
             _stateMachine?.Dispose();
@@ -280,6 +314,7 @@ namespace ScaryMonkey.Enemy
             SetRadarDisabled(disabled: true);
 
             // Turn on light to make target aware of its presence.
+            SetLightMode(LightMode.ChaseTarget);
             SetLightEnabled(enable: true);
 
             PlaySFX(localAlertSFX, volume: 0.8f, randomPitch: true);
@@ -359,6 +394,9 @@ namespace ScaryMonkey.Enemy
 
             // Re-enable radar to allow spotting new targets.
             SetRadarDisabled(disabled: false);
+
+            // Change light color to indicate the state change.
+            SetLightMode(LightMode.LostTarget);
         }
 
         private void OnUpdateLostPlayer()
@@ -419,11 +457,30 @@ namespace ScaryMonkey.Enemy
             }
         }
 
+        private void SetLightMode(LightMode mode)
+        {
+            LocalSetLightMode(mode);
+
+            if (_dataSync != null)
+            {
+                _dataSync.AuthoritySetCurrentLightMode((ushort)mode);
+            }
+        }
+
+        private void LocalSetLightMode(LightMode mode)
+        {
+            _currentLightMode = mode;
+            if (enemyLight != null)
+            {
+                enemyLight.color = CurrentLightColor;
+            }
+        }
+
         private void SetLightEnabled(bool enable)
         {
             if (enemyLight != null)
             {
-                enemyLight.SetActive(enable);
+                enemyLight.gameObject.SetActive(enable);
             }
 
             if (_dataSync!= null)
@@ -444,8 +501,13 @@ namespace ScaryMonkey.Enemy
         {
             if (enemyLight != null)
             {
-                enemyLight.SetActive(enabled);
+                enemyLight.gameObject.SetActive(enabled);
             }
+        }
+
+        private void OnLightModeChanged(ushort mode)
+        {
+            LocalSetLightMode((LightMode)mode);
         }
 
         private void OnLocalPlayerEnteredRadar(Player player)
